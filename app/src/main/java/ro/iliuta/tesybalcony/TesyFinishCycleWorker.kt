@@ -33,7 +33,8 @@ class TesyFinishCycleWorker(context: Context, params: WorkerParameters) : Corout
         if (mac.isNullOrBlank() || startedAt <= 0L) return Result.success()
 
         val deadline = startedAt + settings.cycleDurationMinutes * 60_000L
-        if (deadline - System.currentTimeMillis() > EARLY_TOLERANCE_MS) {
+        val early = inputData.getBoolean(AutomationScheduler.KEY_EARLY, false)
+        if (!early && deadline - System.currentTimeMillis() > EARLY_TOLERANCE_MS) {
             // Too early (e.g. the wall clock moved). Re-arm the alarm and try later.
             OffAlarm.schedule(applicationContext, deadline)
             return Result.retry()

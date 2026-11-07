@@ -71,6 +71,7 @@ class TesyCycleWorker(context: Context, params: WorkerParameters) : CoroutineWor
             if (waitForStatus(client, device.mac, expectedOn = true, requiredConsecutive = 2)) {
                 val deadline = startedAt + settings.cycleDurationMinutes * 60_000L
                 AutomationScheduler.scheduleFinish(applicationContext, deadline - System.currentTimeMillis())
+                AutomationScheduler.scheduleNextEarlyCheck(applicationContext)
                 val exactNote = if (OffAlarm.canScheduleExact(applicationContext)) "" else " (aproximativ, lipsește permisiunea de alarmă exactă)"
                 log("Pornire confirmată. Oprire programată la ${Fmt.clock(deadline)}$exactNote.")
                 Notifier.show(applicationContext, "Convector pornit", "$temp. Se oprește la ${Fmt.clock(deadline)}.")

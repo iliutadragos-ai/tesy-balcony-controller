@@ -11,8 +11,8 @@ android {
         applicationId = "ro.iliuta.tesybalcony"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.2.6-alpha"
+        versionCode = 9
+        versionName = "0.2.7-alpha"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
