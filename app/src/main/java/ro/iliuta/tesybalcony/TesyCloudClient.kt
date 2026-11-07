@@ -157,8 +157,10 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
     } catch (ignored: Exception) { "login: indisponibil" }
 
     suspend fun setPower(device: TesyDevice, on: Boolean) = withContext(Dispatchers.IO) {
-        if (device.mac.isBlank() || device.model.isBlank() || device.token.isBlank() ||
-            listOf(device.model, device.token).any { it.any { ch -> ch == '/' || ch == '#' || ch == '+' || ch == '\u0000' } }) {
+        // The topic must use the MAC exactly as MyTESY reports it (the broker is case-sensitive).
+        val topicMac = device.mac.trim()
+        if (topicMac.isBlank() || device.model.isBlank() || device.token.isBlank() ||
+            listOf(topicMac, device.model, device.token).any { it.any { ch -> ch == '/' || ch == '#' || ch == '+' || ch == '\u0000' || ch.isWhitespace() } }) {
             throw TesyCloudException("Convectorul nu a furnizat datele necesare controlului.")
         }
         val mqtt = MqttClient("wss://mqtt.tesy.com:8083/", "tesy_android_$appId", MemoryPersistence())
@@ -177,7 +179,7 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
                 }
             }
             mqtt.connect(options)
-            val topic = "v1/${normaliseMac(device.mac)}/request/${device.model}/${device.token}/onOff"
+            val topic = "v1/$topicMac/request/${device.model}/${device.token}/onOff"
             val payload = JSONObject().put("app_id", appId).put("status", if (on) "on" else "off")
             val message = MqttMessage(payload.toString().toByteArray(Charsets.UTF_8)).apply {
                 qos = 0
@@ -193,6 +195,18 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
     }
 
     companion object {
+        /** Shape of the MAC used in the topic (no values), for the on-device log. */
+        fun describeMac(mac: String): String {
+            val m = mac.trim()
+            val case = when {
+                m.none { it.isLetter() } -> "fără litere"
+                m == m.lowercase() -> "litere mici"
+                m == m.uppercase() -> "litere mari"
+                else -> "litere mixte"
+            }
+            return "${m.length} caractere, $case, ${if (m.contains(':')) "cu" else "fără"} ':'"
+        }
+
         fun normaliseMac(value: String): String {
             val normal = value.replace(":", "").replace("-", "").uppercase()
             return normal.takeIf { it.matches(Regex("[0-9A-F]{12}")) } ?: ""

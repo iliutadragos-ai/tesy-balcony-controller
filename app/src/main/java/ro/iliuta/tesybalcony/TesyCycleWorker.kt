@@ -65,6 +65,7 @@ class TesyCycleWorker(context: Context, params: WorkerParameters) : CoroutineWor
             val startedAt = System.currentTimeMillis()
             settings.markCycle(device.mac, startedAt, duration)
             log("Verificare: $temp, sub prag. Trimit pornire pentru $duration min.")
+            log("MAC în comandă: ${TesyCloudClient.describeMac(device.mac)}.")
             client.setPower(device, true)
 
             if (waitForStatus(client, device.mac, expectedOn = true, requiredConsecutive = 2)) {
