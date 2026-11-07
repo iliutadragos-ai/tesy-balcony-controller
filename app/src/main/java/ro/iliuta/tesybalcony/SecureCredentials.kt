@@ -39,7 +39,7 @@ class SecureCredentials(private val prefs: android.content.SharedPreferences) {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(128, iv))
             val json = JSONObject(String(cipher.doFinal(ciphertext), Charsets.UTF_8))
-            TesyCredentials(json.getString("email"), json.getString("password"), json.getString("userId"))
+            TesyCredentials(json.getString("email"), json.getString("password"), json.optString("userId", ""))
         } catch (ignored: Exception) {
             // Do not display or log ciphertext, secrets, or keystore errors.
             prefs.edit().remove("credentials").apply()

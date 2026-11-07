@@ -23,7 +23,7 @@ This is an **alpha prototype**. The source is being compiled and tested in GitHu
 Each check, ON, OFF and error is written to an on-device history shown in the app (last 80 entries, no credentials). Notifications are shown when the heater is switched ON or OFF, and once if OFF cannot be confirmed after repeated attempts.
 
 ## MyTESY protocol
-The adapter is based on the community-described MyTESY v4 protocol in https://github.com/Kosztyk/homebridge-tesy-native. It uses HTTPS discovery and MQTT 3.1.1 over secure WebSocket. This is not a public TESY API and can change. It currently requires MyTESY email, password and account user ID.
+The adapter is based on the community-described MyTESY v4 protocol in https://github.com/Kosztyk/homebridge-tesy-native. It uses HTTPS discovery and MQTT 3.1.1 over secure WebSocket. This is not a public TESY API and can change. It requires MyTESY email and password; the numeric account user ID is optional and may be left empty.
 
 Credentials are entered only in the app and encrypted with AES-GCM using Android Keystore. Do not put credentials or device tokens in GitHub or this conversation.
 

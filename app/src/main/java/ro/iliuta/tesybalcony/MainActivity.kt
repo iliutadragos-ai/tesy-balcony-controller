@@ -115,8 +115,8 @@ class MainActivity : ComponentActivity() {
         section(root, "1. Conectare MyTESY")
         emailInput = field(root, "Email MyTESY", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
         passwordInput = field(root, "Parolă MyTESY", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        userIdInput = field(root, "MyTESY user ID", InputType.TYPE_CLASS_TEXT)
-        addText(root, "Protocolul cloud comunitar necesită email, parolă și user ID. Acesta nu este parola și nici adresa de email.", 12f, 0xFF6B6670.toInt(), top = 3)
+        userIdInput = field(root, "MyTESY user ID (opțional)", InputType.TYPE_CLASS_TEXT)
+        addText(root, "User ID-ul este opțional: lasă-l gol dacă nu-l ai. Încearcă mai întâi doar cu email și parolă. Dacă MyTESY îl cere, e un număr din contul tău (nu parola și nu emailul).", 12f, 0xFF6B6670.toInt(), top = 3)
 
         button(root, "Testează conexiunea și caută convectorul") { testConnection() }
         deviceSpinner = Spinner(this)
@@ -243,8 +243,8 @@ class MainActivity : ComponentActivity() {
         val email = emailInput.text.toString().trim()
         val password = passwordInput.text.toString()
         val userId = userIdInput.text.toString().trim()
-        if (email.isBlank() || password.isBlank() || userId.isBlank()) {
-            showStatus("Completează emailul, parola și user ID-ul MyTESY. Nu trimite aceste date în conversație.")
+        if (email.isBlank() || password.isBlank()) {
+            showStatus("Completează emailul și parola MyTESY. Nu trimite aceste date în conversație.")
             return false
         }
         val threshold = thresholdInput.text.toString().replace(',', '.').toDoubleOrNull()

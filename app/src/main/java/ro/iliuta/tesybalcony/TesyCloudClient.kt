@@ -59,7 +59,7 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
         val response = try { http.newCall(request).execute() }
         catch (ignored: Exception) { throw TesyCloudException("Nu pot contacta MyTESY. Verifică internetul.") }
         response.use { r ->
-            if (r.code == 401 || r.code == 403) throw TesyCloudException("MyTESY a respins datele contului. Verifică emailul, parola și user ID-ul.")
+            if (r.code == 401 || r.code == 403) throw TesyCloudException("MyTESY a respins datele contului. Verifică emailul și parola (iar dacă ai completat user ID-ul, și acesta).")
             if (!r.isSuccessful) throw TesyCloudException("MyTESY a returnat eroarea HTTP ${r.code}.")
             val body = r.body?.string() ?: throw TesyCloudException("Răspuns MyTESY gol.")
             val root = try { JSONObject(body) } catch (ignored: Exception) { throw TesyCloudException("Răspuns MyTESY invalid.") }
