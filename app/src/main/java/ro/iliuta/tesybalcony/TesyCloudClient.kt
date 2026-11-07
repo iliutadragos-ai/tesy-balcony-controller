@@ -42,6 +42,10 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
         .followSslRedirects(false)
         .build()
 
+    /** Key names only (never values such as token, MAC or email), safe to paste when debugging. */
+    var lastDiagnostics: String = ""
+        private set
+
     suspend fun getDevices(): List<TesyDevice> = withContext(Dispatchers.IO) {
         val url = "https://ad.mytesy.com/rest/get-my-devices".toHttpUrl().newBuilder()
             .addQueryParameter("userID", credentials.userId)
@@ -65,14 +69,30 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
             val root = try { JSONObject(body) } catch (ignored: Exception) { throw TesyCloudException("Răspuns MyTESY invalid.") }
             if (root.optString("error") == "1") throw TesyCloudException("Datele contului MyTESY nu au fost acceptate.")
             val devices = mutableListOf<TesyDevice>()
+            val notes = mutableListOf<String>()
+            fun names(o: JSONObject): String {
+                val k = o.keys(); val l = mutableListOf<String>()
+                while (k.hasNext()) l += k.next()
+                return l.joinToString(",")
+            }
+            notes += "răspuns: " + names(root).take(200)
             val keys = root.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
                 val item = root.optJSONObject(key) ?: continue
-                val state = item.optJSONObject("state") ?: continue
-                if (!state.has("status") || !state.has("temp") || !state.has("current_temp")) continue
+                val state = item.optJSONObject("state")
+                if (state == null) {
+                    notes += "obiect fără state: " + names(item).take(200)
+                    continue
+                }
+                val missing = listOf("status", "temp", "current_temp").filter { !state.has(it) }
                 val type = (item.optString("type") + " " + item.optString("device_type")).lowercase()
-                if (type.contains("boiler") || type.contains("water")) continue
+                if (missing.isNotEmpty() || type.contains("boiler") || type.contains("water")) {
+                    notes += "respins: lipsă=" + missing.joinToString(",") + " tip=" + type.trim() +
+                        " model_type=" + item.optString("model_type") + " cheiItem=" + names(item).take(200) +
+                        " cheiState=" + names(state).take(200)
+                    continue
+                }
                 val mac = item.optString("mac", key).trim()
                 val normalMac = normaliseMac(mac)
                 if (normalMac.isBlank()) continue
@@ -90,6 +110,7 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
                     ?: "TESY ${item.optString("model_type", model)}"
                 devices += TesyDevice(mac, name, model, item.optString("model_type"), token, temp, on, item)
             }
+            lastDiagnostics = notes.joinToString("\n").take(1500)
             devices
         }
     }

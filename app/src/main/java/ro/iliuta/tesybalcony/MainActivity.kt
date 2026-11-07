@@ -220,10 +220,11 @@ class MainActivity : ComponentActivity() {
         showStatus("Conectare la MyTESY și descoperire dispozitive…")
         lifecycleScope.launch {
             try {
-                val devices = TesyCloudClient(credentials).getDevices()
+                val client = TesyCloudClient(credentials)
+                val devices = client.getDevices()
                 discovered = devices
                 if (devices.isEmpty()) {
-                    showStatus("Contul a răspuns, dar nu am găsit un convector compatibil. Nu trimitem comenzi. Verificăm modelul și protocolul.")
+                    showStatus("Contul a răspuns, dar nu am găsit un convector compatibil. Nu trimitem comenzi. Detalii tehnice (doar nume de câmpuri, fără date personale):\n${client.lastDiagnostics}")
                     return@launch
                 }
                 val labels = devices.map {
