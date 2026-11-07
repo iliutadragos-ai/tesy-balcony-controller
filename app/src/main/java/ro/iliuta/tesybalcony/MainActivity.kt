@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var secure: SecureCredentials
     private lateinit var settings: AutomationSettings
     private lateinit var statusView: TextView
+    private var scrollView: ScrollView? = null
     private lateinit var emailInput: EditText
     private lateinit var passwordInput: EditText
     private lateinit var userIdInput: EditText
@@ -100,6 +101,7 @@ class MainActivity : ComponentActivity() {
             setBackgroundColor(0xFFF7F5F8.toInt())
         }
         val scroll = ScrollView(this).apply { addView(root) }
+        scrollView = scroll
         setContentView(scroll)
 
         val title = TextView(this).apply {
@@ -305,8 +307,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showStatus(value: String) {
-        if (::statusView.isInitialized) statusView.text = value
-        else Toast.makeText(this, value, Toast.LENGTH_LONG).show()
+        Toast.makeText(this, value, Toast.LENGTH_LONG).show()
+        if (::statusView.isInitialized) {
+            statusView.text = value
+            // The status box is far below the buttons; bring it into view.
+            scrollView?.post { scrollView?.smoothScrollTo(0, statusView.top) }
+        }
     }
 
     private fun matchWrap() = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
