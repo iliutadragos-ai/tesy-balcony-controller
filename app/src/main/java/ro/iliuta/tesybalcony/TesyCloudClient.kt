@@ -3,6 +3,8 @@ package ro.iliuta.tesybalcony
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.eclipse.paho.client.mqttv3.MqttClient
@@ -67,6 +69,10 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
             if (!r.isSuccessful) throw TesyCloudException("MyTESY a returnat eroarea HTTP ${r.code}.")
             val body = r.body?.string() ?: throw TesyCloudException("Răspuns MyTESY gol.")
             val root = try { JSONObject(body) } catch (ignored: Exception) { throw TesyCloudException("Răspuns MyTESY invalid.") }
+            if (root.has("error") && root.length() == 1) {
+                val detail = root.opt("error")?.toString().orEmpty().take(200)
+                throw TesyCloudException("MyTESY a refuzat cererea (error=$detail). Detalii tehnice:\n" + probeLogin())
+            }
             if (root.optString("error") == "1") throw TesyCloudException("Datele contului MyTESY nu au fost acceptate.")
             val devices = mutableListOf<TesyDevice>()
             val notes = mutableListOf<String>()
@@ -114,6 +120,41 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
             devices
         }
     }
+
+    private fun describe(o: JSONObject, depth: Int): String {
+        val k = o.keys(); val parts = mutableListOf<String>()
+        while (k.hasNext()) {
+            val key = k.next()
+            val v = o.opt(key)
+            parts += when {
+                v is JSONObject && depth < 2 -> "$key{" + describe(v, depth + 1) + "}"
+                Regex("(?i)user.?id|^uid$").containsMatchIn(key) && v != null && v !is JSONObject -> "$key=" + v.toString().take(40)
+                else -> key
+            }
+        }
+        return parts.joinToString(",").take(600)
+    }
+
+    /** Debug helper: key names of the old-app login reply (values only for user-id keys). */
+    private fun probeLogin(): String = try {
+        val json = JSONObject()
+            .put("email", credentials.email).put("password", credentials.password)
+            .put("userID", credentials.userId)
+            .put("userEmail", credentials.email).put("userPass", credentials.password)
+            .put("lang", "en")
+        val req = Request.Builder()
+            .url("https://ad.mytesy.com/rest/old-app-login")
+            .header("Origin", "https://v4.mytesy.com")
+            .header("Referer", "https://v4.mytesy.com/")
+            .post(json.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+        http.newCall(req).execute().use { r ->
+            val text = r.body?.string().orEmpty()
+            val parsed = try { JSONObject(text) } catch (ignored: Exception) { null }
+            if (parsed == null) "login HTTP ${r.code}, răspuns non-JSON (${text.length} caractere)"
+            else "login HTTP ${r.code}: " + describe(parsed, 0)
+        }
+    } catch (ignored: Exception) { "login: indisponibil" }
 
     suspend fun setPower(device: TesyDevice, on: Boolean) = withContext(Dispatchers.IO) {
         if (device.mac.isBlank() || device.model.isBlank() || device.token.isBlank() ||
