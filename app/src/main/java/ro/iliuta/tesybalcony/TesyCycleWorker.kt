@@ -115,19 +115,27 @@ class TesyCycleWorker(context: Context, params: WorkerParameters) : CoroutineWor
         requiredConsecutive: Int
     ): Boolean {
         var consecutive = 0
-        repeat(5) { attempt ->
-            delay(if (attempt == 0) 2_000L else 3_000L)
+        val seen = mutableListOf<String>()
+        // MyTESY can take well over 10 s to report the new state, so wait up to ~40 s.
+        repeat(10) { attempt ->
+            delay(if (attempt == 0) 3_000L else 4_000L)
             val latest = runCatching { client.getDevices() }.getOrNull()
-            val state = latest?.firstOrNull {
+            val found = latest?.firstOrNull {
                 TesyCloudClient.normaliseMac(it.mac) == TesyCloudClient.normaliseMac(mac)
-            }?.statusOn
-            if (state == expectedOn) {
+            }
+            seen += if (latest == null) "eroare" else if (found == null) "lipsă"
+                else found.raw.optJSONObject("state")?.optString("status")?.take(12).orEmpty().ifBlank { "?" }
+            if (found?.statusOn == expectedOn) {
                 consecutive++
-                if (consecutive >= requiredConsecutive) return true
+                if (consecutive >= requiredConsecutive) {
+                    log("Stări citite (${if (expectedOn) "pornire" else "oprire"}): ${seen.joinToString(", ")}")
+                    return true
+                }
             } else {
                 consecutive = 0
             }
         }
+        log("Stări citite (${if (expectedOn) "pornire" else "oprire"}): ${seen.joinToString(", ")}")
         return false
     }
 }
