@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Reconstruct source archive
+        run: |
+          cat android-source.tar.xz.b64.* | base64 --decode > android-source.tar.xz
+          xz --test android-source.tar.xz
       - name: Extract Android project sources
         run: tar -xJf android-source.tar.xz
       - name: Set up JDK 17
@@ -29,9 +33,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.13'
+          gradle-version: '8.14.4'
       - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version 8.13 --distribution-type bin
+        run: gradle wrapper --gradle-version 8.14.4 --distribution-type bin
       - name: Run unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
       - name: Build debug APK
