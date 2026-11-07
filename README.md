@@ -1,22 +1,25 @@
 # TESY Balcony Controller
 
-Android app for a TESY CN 052 EI Cloud convector.
+Android companion app for a TESY CN 052 Wi-Fi convector.
 
-## Initial profile
-- Device: OnePlus, Android 15+
-- Temperature threshold: 10 °C
-- Heating cycle: 20 minutes
-- Re-check: every 3 hours
+- OnePlus / Android 15+
+- Default automation: turn on only below 10°C; request OFF after 20 minutes
+- Check temperature every 3 hours (Android may defer scheduled work)
+- MyTESY cloud integration is community-protocol based and **not yet validated on the physical CN 052**.
 
-## Safety requirements
-- Fail closed: never turn the heater on when temperature is missing, stale, or invalid.
-- Verify ON/OFF by reading state back from MyTESY; MQTT publish success alone is not device confirmation.
-- Persist an active cycle's OFF deadline independently from the periodic check.
-- Stopping automation must not cancel a pending OFF action.
-- Never commit account credentials, device tokens, or logs containing them.
-- Do not claim CN 052 compatibility until tested on this exact user's convector.
+The complete Kotlin/Gradle source project is stored in [android-source.tar.xz](./android-source.tar.xz). The GitHub Actions workflow extracts it, runs unit tests, builds a debug APK, and uploads the APK as a 14-day artifact.
 
-## Status
-Repository bootstrap only. Android project and cloud adapter must be added and compiled before an APK can be provided.
+## Build the APK
+Open **Actions → Build Android APK → Run workflow**. Download the artifact named `tesy-balcony-controller-debug-apk` and install `app-debug.apk`.
 
-See docs/IMPLEMENTATION_PLAN.md for the planned implementation and caveats.
+## Important safety notes
+- Unknown temperature or power status never triggers ON.
+- A heater already switched on manually is not taken over by the automation.
+- ON/OFF commands are verified by reading state back from MyTESY; QoS 0 message publish is not treated as device confirmation.
+- The separate OFF work request survives stopping future temperature checks and retries until OFF is confirmed.
+- WorkManager is not exact timing. OxygenOS battery controls, force-stop, loss of internet, phone shutdown, or a MyTESY outage can delay/prevent commands.
+- Test the device discovery and a supervised ON/OFF cycle before unattended operation. Keep built-in thermostat and protection functions enabled.
+
+Credentials must be entered only in the Android app. Do not add MyTESY credentials or device tokens to this repository.
+
+Unofficial independent project; not affiliated with or endorsed by TESY.
