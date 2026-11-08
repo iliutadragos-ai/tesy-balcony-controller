@@ -21,6 +21,24 @@ class AutomationSettings(context: Context) {
         get() = prefs.getString("selected_mac", null)
         set(value) { prefs.edit().putString("selected_mac", value).apply() }
 
+    val hasAutomationFlag: Boolean get() = prefs.contains("automation_enabled")
+
+    var automationEnabled: Boolean
+        get() = prefs.getBoolean("automation_enabled", false)
+        set(value) { prefs.edit().putBoolean("automation_enabled", value).apply() }
+
+    var deviceName: String?
+        get() = prefs.getString("device_name", null)
+        set(value) { prefs.edit().putString("device_name", value).apply() }
+
+    var lastTempC: Double?
+        get() = prefs.getString("last_temp", null)?.toDoubleOrNull()
+        set(value) { prefs.edit().putString("last_temp", value?.toString()).apply() }
+
+    var lastTempAt: Long
+        get() = prefs.getLong("last_temp_at", 0L)
+        set(value) { prefs.edit().putLong("last_temp_at", value).apply() }
+
     var cycleMac: String?
         get() = prefs.getString("cycle_mac", null)
         private set(value) { prefs.edit().putString("cycle_mac", value).apply() }

@@ -46,6 +46,8 @@ class TesyCycleWorker(context: Context, params: WorkerParameters) : CoroutineWor
                 log("Temperatura nu poate fi citită. Nu pornesc. Reîncerc.")
                 return Result.retry()
             }
+            settings.lastTempC = current
+            settings.lastTempAt = System.currentTimeMillis()
             val temp = Fmt.temp(current)
 
             // Only a positively reported OFF state is eligible. Unknown status

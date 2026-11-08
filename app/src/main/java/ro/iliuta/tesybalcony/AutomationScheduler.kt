@@ -80,6 +80,12 @@ object AutomationScheduler {
         )
     }
 
+    /** True when the periodic check is queued (blocking call: use off the main thread). */
+    fun isPeriodicScheduled(context: Context): Boolean = try {
+        WorkManager.getInstance(context).getWorkInfosForUniqueWork(PERIODIC_NAME).get()
+            .any { !it.state.isFinished }
+    } catch (ignored: Exception) { false }
+
     /** Schedules the next mid-cycle temperature check (every 5 min, never in the last minute). */
     fun scheduleNextEarlyCheck(context: Context) {
         val settings = AutomationSettings(context)
