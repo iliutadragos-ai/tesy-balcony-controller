@@ -41,15 +41,20 @@ class TesyEarlyCheckWorker(context: Context, params: WorkerParameters) : Corouti
             val target = device?.raw?.optJSONObject("state")?.optString("temp")?.toDoubleOrNull()
                 ?.takeIf { it.isFinite() && it in 0.0..60.0 }
             val minutes = (now - startedAt) / 60_000L
-            if (device != null && current != null && target != null) {
-                if (device.statusOn != false && current >= target) {
-                    log("Verificare la $minutes min: ${Fmt.temp(current)}, a atins ${Fmt.temp(target)} setat pe aparat. Opresc.")
+            val stopTarget = settings.stopTargetC
+            if (device != null && current != null) {
+                val reachedStop = current >= stopTarget
+                val reachedDevice = target != null && current >= target
+                if (device.statusOn != false && (reachedStop || reachedDevice)) {
+                    val why = if (reachedStop) "a atins ${Fmt.temp(stopTarget)} (prag + histerezis)"
+                        else "a atins ${Fmt.temp(target!!)} setat pe aparat"
+                    log("Verificare la $minutes min: ${Fmt.temp(current)}, $why. Opresc.")
                     AutomationScheduler.runEarlyStopNow(applicationContext)
                     return Result.success()
                 }
-                log("Verificare la $minutes min: ${Fmt.temp(current)}, țintă ${Fmt.temp(target)}. Continui.")
+                log("Verificare la $minutes min: ${Fmt.temp(current)}, oprire la ${Fmt.temp(stopTarget)}. Continui.")
             } else {
-                log("Verificare la $minutes min: temperatura sau ținta nu pot fi citite. Continui până la oprirea programată.")
+                log("Verificare la $minutes min: temperatura nu poate fi citită. Continui până la oprirea programată.")
             }
         } catch (ignored: Exception) {
             // The guaranteed OFF at the deadline is unaffected; just try the next slot.

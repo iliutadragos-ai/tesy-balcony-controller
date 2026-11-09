@@ -5,6 +5,13 @@ import android.content.Context
 class AutomationSettings(context: Context) {
     private val prefs = context.getSharedPreferences("automation", Context.MODE_PRIVATE)
 
+    /** The heater is stopped early once the room reaches thresholdC + hysteresisC. */
+    var hysteresisC: Double
+        get() = prefs.getString("hysteresis_c", null)?.toDoubleOrNull()?.takeIf { it.isFinite() && it in 0.0..10.0 } ?: 2.0
+        set(value) { prefs.edit().putString("hysteresis_c", value.toString()).apply() }
+
+    val stopTargetC: Double get() = thresholdC + hysteresisC
+
     var thresholdC: Double
         get() = prefs.getString("threshold", "10")?.toDoubleOrNull() ?: 10.0
         set(value) { prefs.edit().putString("threshold", value.toString()).apply() }

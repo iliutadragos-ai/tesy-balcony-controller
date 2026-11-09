@@ -66,7 +66,11 @@ class TesyCycleWorker(context: Context, params: WorkerParameters) : CoroutineWor
             val duration = settings.durationMinutes
             val startedAt = System.currentTimeMillis()
             settings.markCycle(device.mac, startedAt, duration)
-            log("Verificare: $temp, sub prag. Trimit pornire pentru $duration min.")
+            log("Verificare: $temp, sub prag. Trimit pornire pentru $duration min (oprire anticipată la ${Fmt.temp(settings.stopTargetC)}).")
+            val deviceTarget = device.raw.optJSONObject("state")?.optString("temp")?.toDoubleOrNull()
+            if (deviceTarget != null && deviceTarget < settings.stopTargetC) {
+                log("Atenție: aparatul e setat la ${Fmt.temp(deviceTarget)} și va încălzi doar până acolo. Pentru ${Fmt.temp(settings.stopTargetC)} setează-l pe aparat la cel puțin această valoare.")
+            }
             log("MAC în comandă: ${TesyCloudClient.describeMac(device.mac)}.")
             client.setPower(device, true)
 

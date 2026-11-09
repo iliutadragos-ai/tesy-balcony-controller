@@ -84,6 +84,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var automationCard: LinearLayout
     private lateinit var automationChip: TextView
     private lateinit var thresholdInput: EditText
+    private lateinit var hysteresisInput: EditText
+    private lateinit var automationSummary: TextView
     private lateinit var durationInput: EditText
     private lateinit var intervalInput: EditText
     private lateinit var toggleButton: Button
@@ -294,11 +296,21 @@ class MainActivity : ComponentActivity() {
     private fun buildAutomationCard(root: LinearLayout) {
         automationCard = card(root)
         automationChip = cardHeader(automationCard, "Automatizare")
-        addText(automationCard, "Pornește convectorul când temperatura scade sub prag. Îl oprește după durata setată, sau mai devreme dacă atinge temperatura setată pe aparat.", 13f, MUTED, top = 6)
+        addText(automationCard, "Ca la un termostat: pornește convectorul când temperatura scade sub prag și îl oprește când ajunge la prag + histerezis (verificat din 5 în 5 minute), cel târziu după durata maximă. Temperatura setată pe aparat trebuie să fie cel puțin la nivelul de oprire.", 13f, MUTED, top = 6)
         thresholdInput = settingRow(automationCard, "Prag temperatură", "Pornește sub această valoare", InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "°C")
-        durationInput = settingRow(automationCard, "Durată pornire", "Între 5 și 60 de minute", InputType.TYPE_CLASS_NUMBER, "min")
+        hysteresisInput = settingRow(automationCard, "Histerezis", "Oprește la prag + această valoare", InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "°C")
+        durationInput = settingRow(automationCard, "Durată maximă pornire", "Între 5 și 60 de minute", InputType.TYPE_CLASS_NUMBER, "min")
         intervalInput = settingRow(automationCard, "Verificare la fiecare", "Între 1 și 12 ore", InputType.TYPE_CLASS_NUMBER, "ore")
-        toggleButton = button(automationCard, "Activează automatizarea", BtnStyle.PRIMARY, top = 20) { toggleAutomation() }
+        automationSummary = TextView(this).apply {
+            textSize = 13f
+            setTextColor(BRAND)
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = rounded(0xFFF7F0F9.toInt(), 12)
+            setLineSpacing(0f, 1.15f)
+        }
+        automationCard.addView(automationSummary, matchWrap().apply { topMargin = dp(18) })
+        toggleButton = button(automationCard, "Activează automatizarea", BtnStyle.PRIMARY, top = 14) { toggleAutomation() }
         button(automationCard, "Verifică acum", BtnStyle.SECONDARY, top = 8) {
             if (saveAll(showMessage = false)) {
                 AutomationScheduler.checkNow(this)
@@ -624,6 +636,12 @@ class MainActivity : ComponentActivity() {
         styleButton(toggleButton, if (enabled) BtnStyle.SECONDARY else BtnStyle.PRIMARY)
         setChip(automationChip, if (enabled) "● Activă" else "○ Oprită", if (enabled) OK_FG else MUTED, if (enabled) OK_BG else NEUTRAL_BG)
         updateHero()
+        updateAutomationSummary()
+    }
+
+    private fun updateAutomationSummary() {
+        if (!::automationSummary.isInitialized) return
+        automationSummary.text = "Pornește sub ${Fmt.temp(settings.thresholdC)} · oprește la ${Fmt.temp(settings.stopTargetC)} (cel mult ${settings.durationMinutes} min)"
     }
 
     private fun updateHero() {
@@ -701,6 +719,7 @@ class MainActivity : ComponentActivity() {
             userIdInput.setText(it.userId)
         }
         thresholdInput.setText(settings.thresholdC.toString())
+        hysteresisInput.setText(settings.hysteresisC.toString())
         durationInput.setText(settings.durationMinutes.toString())
         intervalInput.setText(settings.intervalHours.toString())
     }
@@ -780,7 +799,7 @@ class MainActivity : ComponentActivity() {
             AutomationScheduler.start(this, settings.intervalHours)
             AutomationScheduler.checkNow(this)
             settings.automationEnabled = true
-            EventLog.add(this, "Automatizare activată: prag ${settings.thresholdC}°C, ${settings.durationMinutes} min, la fiecare ${settings.intervalHours} ore.")
+            EventLog.add(this, "Automatizare activată: pornește sub ${settings.thresholdC}°C, oprește la ${settings.stopTargetC}°C, maxim ${settings.durationMinutes} min, la fiecare ${settings.intervalHours} ore.")
             refreshLog()
             scheduleLogRefresh()
             showStatus("Automatizare activă. Prima verificare a fost solicitată acum; următoarele vor fi la fiecare ${settings.intervalHours} ore.", TONE_OK)
@@ -799,15 +818,17 @@ class MainActivity : ComponentActivity() {
             return false
         }
         val threshold = thresholdInput.text.toString().replace(',', '.').toDoubleOrNull()
+        val hysteresis = hysteresisInput.text.toString().replace(',', '.').toDoubleOrNull()
         val duration = durationInput.text.toString().toIntOrNull()
         val interval = intervalInput.text.toString().toIntOrNull()
-        if (threshold == null || !threshold.isFinite() || threshold !in 0.0..30.0 || duration == null || duration !in 5..60 || interval == null || interval !in 1..12) {
-            showStatus("Setări invalide. Prag: 0–30°C; durată: 5–60 minute; interval: 1–12 ore.", TONE_WARN)
+        if (threshold == null || !threshold.isFinite() || threshold !in 0.0..30.0 || hysteresis == null || !hysteresis.isFinite() || hysteresis !in 0.0..10.0 || duration == null || duration !in 5..60 || interval == null || interval !in 1..12) {
+            showStatus("Setări invalide. Prag: 0–30°C; histerezis: 0–10°C; durată: 5–60 minute; interval: 1–12 ore.", TONE_WARN)
             return false
         }
         val previousInterval = settings.intervalHours
         secure.save(TesyCredentials(email, password, userId))
         settings.thresholdC = threshold
+        settings.hysteresisC = hysteresis
         settings.durationMinutes = duration
         settings.intervalHours = interval
         if (discovered.isNotEmpty()) {
@@ -819,6 +840,7 @@ class MainActivity : ComponentActivity() {
             AutomationScheduler.start(this, interval)
         }
         updateHero()
+        updateAutomationSummary()
         if (showMessage) showStatus("Setările au fost salvate pe telefon. Datele contului sunt criptate cu Android Keystore.", TONE_OK)
         return true
     }
