@@ -1,6 +1,7 @@
 package ro.iliuta.tesybalcony
 
 import android.content.Context
+import kotlin.math.roundToInt
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.delay
@@ -68,13 +69,34 @@ class TesyCycleWorker(context: Context, params: WorkerParameters) : CoroutineWor
             settings.markCycle(device.mac, startedAt, duration)
             log("Verificare: $temp, sub prag. Trimit pornire pentru $duration min (oprire anticipată la ${Fmt.temp(settings.stopTargetC)}).")
             val deviceTarget = device.raw.optJSONObject("state")?.optString("temp")?.toDoubleOrNull()
-            if (deviceTarget != null && deviceTarget < settings.stopTargetC) {
+            val desiredTarget = kotlin.math.ceil(settings.stopTargetC).toInt().coerceIn(5, 35)
+            if (settings.setDeviceTarget) {
+                if (deviceTarget == null || deviceTarget.roundToInt() != desiredTarget) {
+                    try {
+                        client.setTemp(device, desiredTarget)
+                        log("Setez ținta pe aparat la ${desiredTarget}°C (era ${deviceTarget?.let { Fmt.temp(it) } ?: "necunoscută"}).")
+                        delay(1_500L)
+                    } catch (e: Exception) {
+                        log("Nu am putut seta ținta pe aparat (${e.message ?: "eroare"}). Continui cu ținta existentă.")
+                    }
+                }
+            } else if (deviceTarget != null && deviceTarget < settings.stopTargetC) {
                 log("Atenție: aparatul e setat la ${Fmt.temp(deviceTarget)} și va încălzi doar până acolo. Pentru ${Fmt.temp(settings.stopTargetC)} setează-l pe aparat la cel puțin această valoare.")
             }
             log("MAC în comandă: ${TesyCloudClient.describeMac(device.mac)}.")
             client.setPower(device, true)
 
             if (waitForStatus(client, device.mac, expectedOn = true, requiredConsecutive = 2)) {
+                if (settings.setDeviceTarget) {
+                    val after = runCatching { client.getDevices() }.getOrNull()?.firstOrNull {
+                        TesyCloudClient.normaliseMac(it.mac) == TesyCloudClient.normaliseMac(device.mac)
+                    }
+                    val shown = after?.raw?.optJSONObject("state")?.optString("temp")?.toDoubleOrNull()
+                    if (shown != null) {
+                        log("Ținta pe aparat acum: ${Fmt.temp(shown)}" +
+                            if (shown.roundToInt() != desiredTarget) " (diferă de ${desiredTarget}°C cerut)." else ".")
+                    }
+                }
                 val deadline = startedAt + settings.cycleDurationMinutes * 60_000L
                 AutomationScheduler.scheduleFinish(applicationContext, deadline - System.currentTimeMillis())
                 AutomationScheduler.scheduleNextEarlyCheck(applicationContext)

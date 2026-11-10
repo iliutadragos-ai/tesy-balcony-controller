@@ -10,6 +10,11 @@ class AutomationSettings(context: Context) {
         get() = prefs.getString("hysteresis_c", null)?.toDoubleOrNull()?.takeIf { it.isFinite() && it in 0.0..10.0 } ?: 2.0
         set(value) { prefs.edit().putString("hysteresis_c", value.toString()).apply() }
 
+    /** When true, the heater's own target temperature is set to the stop level at every start. */
+    var setDeviceTarget: Boolean
+        get() = prefs.getBoolean("set_device_target", true)
+        set(value) { prefs.edit().putBoolean("set_device_target", value).apply() }
+
     val stopTargetC: Double get() = thresholdC + hysteresisC
 
     var thresholdC: Double

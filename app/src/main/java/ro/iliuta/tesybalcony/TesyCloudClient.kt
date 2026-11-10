@@ -156,7 +156,14 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
         }
     } catch (ignored: Exception) { "login: indisponibil" }
 
-    suspend fun setPower(device: TesyDevice, on: Boolean) = withContext(Dispatchers.IO) {
+    suspend fun setPower(device: TesyDevice, on: Boolean) =
+        sendCommand(device, "onOff", JSONObject().put("status", if (on) "on" else "off"))
+
+    /** Target temperature on the heater itself (whole degrees, as the heater's display uses). */
+    suspend fun setTemp(device: TesyDevice, celsius: Int) =
+        sendCommand(device, "setTemp", JSONObject().put("temp", celsius))
+
+    private suspend fun sendCommand(device: TesyDevice, command: String, body: JSONObject) = withContext(Dispatchers.IO) {
         // The topic must use the MAC exactly as MyTESY reports it (the broker is case-sensitive).
         val topicMac = device.mac.trim()
         if (topicMac.isBlank() || device.model.isBlank() || device.token.isBlank() ||
@@ -179,8 +186,10 @@ class TesyCloudClient(private val credentials: TesyCredentials) {
                 }
             }
             mqtt.connect(options)
-            val topic = "v1/$topicMac/request/${device.model}/${device.token}/onOff"
-            val payload = JSONObject().put("app_id", appId).put("status", if (on) "on" else "off")
+            val topic = "v1/$topicMac/request/${device.model}/${device.token}/$command"
+            val payload = JSONObject().put("app_id", appId)
+            val keys = body.keys()
+            while (keys.hasNext()) { val k = keys.next(); payload.put(k, body.get(k)) }
             val message = MqttMessage(payload.toString().toByteArray(Charsets.UTF_8)).apply {
                 qos = 0
                 isRetained = false

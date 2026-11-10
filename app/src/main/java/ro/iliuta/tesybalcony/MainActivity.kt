@@ -85,6 +85,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var automationChip: TextView
     private lateinit var thresholdInput: EditText
     private lateinit var hysteresisInput: EditText
+    private lateinit var targetSwitch: android.widget.Switch
     private lateinit var automationSummary: TextView
     private lateinit var durationInput: EditText
     private lateinit var intervalInput: EditText
@@ -296,9 +297,34 @@ class MainActivity : ComponentActivity() {
     private fun buildAutomationCard(root: LinearLayout) {
         automationCard = card(root)
         automationChip = cardHeader(automationCard, "Automatizare")
-        addText(automationCard, "Ca la un termostat: pornește convectorul când temperatura scade sub prag și îl oprește când ajunge la prag + histerezis (verificat din 5 în 5 minute), cel târziu după durata maximă. Temperatura setată pe aparat trebuie să fie cel puțin la nivelul de oprire.", 13f, MUTED, top = 6)
+        addText(automationCard, "Ca la un termostat: pornește convectorul când temperatura scade sub prag și îl oprește când ajunge la prag + histerezis (verificat din 5 în 5 minute), cel târziu după durata maximă. Cu „Setează ținta pe aparat”, aplicația pune singură pe convector temperatura de oprire la fiecare pornire.", 13f, MUTED, top = 6)
         thresholdInput = settingRow(automationCard, "Prag temperatură", "Pornește sub această valoare", InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "°C")
         hysteresisInput = settingRow(automationCard, "Histerezis", "Oprește la prag + această valoare", InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "°C")
+        val targetRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val targetTexts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        targetTexts.addView(TextView(this).apply {
+            text = "Setează ținta pe aparat"
+            textSize = 15f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(INK)
+        })
+        targetTexts.addView(TextView(this).apply {
+            text = "La pornire pune pe convector temperatura de oprire (rotunjită în sus)"
+            textSize = 12f
+            setTextColor(MUTED)
+        })
+        targetRow.addView(targetTexts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        targetSwitch = android.widget.Switch(this).apply {
+            isChecked = settings.setDeviceTarget
+            setOnCheckedChangeListener { _, checked -> settings.setDeviceTarget = checked }
+        }
+        targetRow.addView(targetSwitch, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
+        automationCard.addView(targetRow, matchWrap().apply { topMargin = dp(16) })
         durationInput = settingRow(automationCard, "Durată maximă pornire", "Între 5 și 60 de minute", InputType.TYPE_CLASS_NUMBER, "min")
         intervalInput = settingRow(automationCard, "Verificare la fiecare", "Între 1 și 12 ore", InputType.TYPE_CLASS_NUMBER, "ore")
         automationSummary = TextView(this).apply {
