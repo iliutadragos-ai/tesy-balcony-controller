@@ -60,7 +60,7 @@ object AutomationScheduler {
         OffAlarm.schedule(context, System.currentTimeMillis() + delay)
         val request = OneTimeWorkRequestBuilder<TesyFinishCycleWorker>()
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setConstraints(networkConstraints())
+            
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
@@ -72,7 +72,7 @@ object AutomationScheduler {
     fun runFinishNow(context: Context) {
         val request = OneTimeWorkRequestBuilder<TesyFinishCycleWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .setConstraints(networkConstraints())
+            
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
@@ -99,7 +99,7 @@ object AutomationScheduler {
         if (at > deadline - 60_000L) return
         val request = OneTimeWorkRequestBuilder<TesyEarlyCheckWorker>()
             .setInitialDelay((at - now).coerceAtLeast(0L), TimeUnit.MILLISECONDS)
-            .setConstraints(networkConstraints())
+            
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             EARLY_CHECK_PREFIX + startedAt + "_" + slot, ExistingWorkPolicy.KEEP, request
@@ -111,7 +111,7 @@ object AutomationScheduler {
         val request = OneTimeWorkRequestBuilder<TesyFinishCycleWorker>()
             .setInputData(workDataOf(KEY_EARLY to true))
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .setConstraints(networkConstraints())
+            
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(

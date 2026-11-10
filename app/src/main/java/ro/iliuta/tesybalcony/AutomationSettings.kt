@@ -46,6 +46,17 @@ class AutomationSettings(context: Context) {
         get() = prefs.getLong("last_temp_at", 0L)
         set(value) { prefs.edit().putLong("last_temp_at", value).apply() }
 
+    /** Counts alarm-driven OFF retries for the current cycle (resets when a new cycle starts). */
+    fun nextFinishRetry(): Int {
+        val cycle = cycleStartedAt
+        if (prefs.getLong("finish_retry_cycle", -1L) != cycle) {
+            prefs.edit().putLong("finish_retry_cycle", cycle).putInt("finish_retries", 0).apply()
+        }
+        val next = prefs.getInt("finish_retries", 0) + 1
+        prefs.edit().putInt("finish_retries", next).apply()
+        return next
+    }
+
     var cycleMac: String?
         get() = prefs.getString("cycle_mac", null)
         private set(value) { prefs.edit().putString("cycle_mac", value).apply() }

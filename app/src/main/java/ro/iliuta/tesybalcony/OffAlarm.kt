@@ -56,7 +56,12 @@ object OffAlarm {
 class FinishAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != OffAlarm.ACTION) return
-        AutomationScheduler.runFinishNow(context.applicationContext)
+        val app = context.applicationContext
+        try {
+            androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, FinishService::class.java))
+        } catch (ignored: Exception) {
+            AutomationScheduler.runFinishNow(app)
+        }
     }
 }
 
